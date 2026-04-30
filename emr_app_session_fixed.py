@@ -12,7 +12,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 DB_HOST = "localhost"
 DB_USER = "root"
-DB_PASSWORD = "W3st42069!"  # replace with your local MySQL password
+DB_PASSWORD = "CHANGEME"  # replace with your local MySQL password
 DB_NAME = "StudentClinicEMR_P2"
 
 
