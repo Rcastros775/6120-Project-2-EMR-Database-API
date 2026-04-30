@@ -1,0 +1,164 @@
+DROP DATABASE IF EXISTS StudentClinicEMR_P2;
+CREATE DATABASE StudentClinicEMR_P2;
+USE StudentClinicEMR_P2;
+
+-- 1. TABLES
+
+CREATE TABLE Insurance (
+    InsuranceID INT PRIMARY KEY AUTO_INCREMENT,
+    ProviderName VARCHAR(100) NOT NULL,
+    PlanType VARCHAR(50),
+    PolicyNumber VARCHAR(50) UNIQUE NOT NULL
+);
+
+CREATE TABLE DiagnosisCatalog (
+    DiagnosisCode VARCHAR(20) PRIMARY KEY,
+    DiagnosisDescription VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE SymptomCatalog (
+    SymptomID INT PRIMARY KEY AUTO_INCREMENT,
+    SymptomName VARCHAR(100) UNIQUE NOT NULL
+);
+
+CREATE TABLE Facility (
+    FacilityID INT PRIMARY KEY AUTO_INCREMENT,
+    FacilityName VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE Employee (
+    StaffID INT PRIMARY KEY AUTO_INCREMENT,
+    FirstName VARCHAR(50) NOT NULL,
+    LastName VARCHAR(50) NOT NULL,
+    JobTitle ENUM('Admin', 'Doctor', 'Nurse', 'Receptionist') NOT NULL
+);
+
+CREATE TABLE Patient (
+    PatientID INT PRIMARY KEY AUTO_INCREMENT,
+    FirstName VARCHAR(50) NOT NULL,
+    LastName VARCHAR(50) NOT NULL,
+    DOB DATE NOT NULL,
+    Gender ENUM('Male', 'Female', 'Other') NOT NULL,
+    Phone VARCHAR(20),
+    Email VARCHAR(100) UNIQUE,
+    InsuranceID INT,
+    FOREIGN KEY (InsuranceID) REFERENCES Insurance(InsuranceID)
+        ON UPDATE CASCADE ON DELETE SET NULL
+);
+
+CREATE TABLE PatientAddress (
+    AddressID INT PRIMARY KEY AUTO_INCREMENT,
+    PatientID INT NOT NULL UNIQUE,
+    Street VARCHAR(255),
+    City VARCHAR(100),
+    State CHAR(2),
+    ZipCode VARCHAR(10),
+    FOREIGN KEY (PatientID) REFERENCES Patient(PatientID)
+        ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE TABLE Users (
+    UserID INT PRIMARY KEY AUTO_INCREMENT,
+    StaffID INT NULL,
+    PatientID INT NULL,
+    Username VARCHAR(50) UNIQUE NOT NULL,
+    UserPassword VARCHAR(255) NOT NULL,
+    UserRole ENUM('Admin', 'Doctor', 'Nurse', 'Receptionist', 'Patient') NOT NULL,
+    IsActive TINYINT(1) NOT NULL DEFAULT 1,
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (StaffID) REFERENCES Employee(StaffID)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    FOREIGN KEY (PatientID) REFERENCES Patient(PatientID)
+        ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+CREATE TABLE Appointment (
+    VisitID INT PRIMARY KEY AUTO_INCREMENT,
+    PatientID INT NOT NULL,
+    StaffID INT NOT NULL,
+    FacilityID INT NOT NULL,
+    VisitDate DATETIME NOT NULL,
+    ReasonForVisit TEXT,
+    Status ENUM('Scheduled', 'Completed', 'Cancelled') NOT NULL DEFAULT 'Scheduled',
+    FOREIGN KEY (PatientID) REFERENCES Patient(PatientID)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    FOREIGN KEY (StaffID) REFERENCES Employee(StaffID)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    FOREIGN KEY (FacilityID) REFERENCES Facility(FacilityID)
+        ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+CREATE TABLE VisitSymptoms (
+    VisitID INT NOT NULL,
+    SymptomID INT NOT NULL,
+    Severity ENUM('Mild', 'Moderate', 'Severe') NOT NULL,
+    RecordedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (VisitID, SymptomID),
+    FOREIGN KEY (VisitID) REFERENCES Appointment(VisitID)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY (SymptomID) REFERENCES SymptomCatalog(SymptomID)
+        ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+CREATE TABLE LabResults (
+    LabID INT PRIMARY KEY AUTO_INCREMENT,
+    VisitID INT NOT NULL,
+    TestName VARCHAR(100) NOT NULL,
+    ResultValue VARCHAR(255),
+    RecordedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (VisitID) REFERENCES Appointment(VisitID)
+        ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE TABLE Diagnose (
+    DiagnosisID INT PRIMARY KEY AUTO_INCREMENT,
+    VisitID INT NOT NULL,
+    DiagnosisCode VARCHAR(20) NOT NULL,
+    Notes TEXT,
+    DiagnosedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (VisitID) REFERENCES Appointment(VisitID)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY (DiagnosisCode) REFERENCES DiagnosisCatalog(DiagnosisCode)
+        ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+CREATE TABLE Prescription (
+    PrescriptionID INT PRIMARY KEY AUTO_INCREMENT,
+    VisitID INT NOT NULL,
+    MedicationName VARCHAR(100) NOT NULL,
+    Dosage VARCHAR(50),
+    Instructions TEXT,
+    PrescribedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (VisitID) REFERENCES Appointment(VisitID)
+        ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE TABLE Billing (
+    BillID INT PRIMARY KEY AUTO_INCREMENT,
+    VisitID INT NOT NULL UNIQUE,
+    AmountCharged DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    PatientBalance DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    PaymentStatus ENUM('Unpaid', 'Pending', 'Paid') NOT NULL DEFAULT 'Unpaid',
+    FOREIGN KEY (VisitID) REFERENCES Appointment(VisitID)
+        ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE TABLE AuditLog (
+    LogID INT PRIMARY KEY AUTO_INCREMENT,
+    TableName VARCHAR(100) NOT NULL,
+    RecordID INT NOT NULL,
+    ActionType ENUM('INSERT', 'UPDATE', 'DELETE') NOT NULL,
+    OldValue TEXT,
+    NewValue TEXT,
+    ChangedBy VARCHAR(100) DEFAULT 'SYSTEM',
+    ChangedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE AccessLog (
+    AccessID INT PRIMARY KEY AUTO_INCREMENT,
+    TableName VARCHAR(100) NOT NULL,
+    AccessedBy VARCHAR(100) DEFAULT 'SYSTEM',
+    AccessTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ActionDetail VARCHAR(255) NOT NULL
+);
+
